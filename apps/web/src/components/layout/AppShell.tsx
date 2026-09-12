@@ -101,32 +101,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex flex-col w-64 border-r border-gym-border bg-gym-surface/80 backdrop-blur-xl shrink-0">
         {/* Brand Header */}
-        <div className="h-16 flex items-center px-6 border-b border-gym-border gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-gym-red to-red-600 flex items-center justify-center shadow-lg shadow-red-500/20 text-white">
-            <Dumbbell className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="font-bold tracking-tight text-lg text-white">GYMCARE</span>
-            <span className="text-xs ml-1 font-semibold px-1.5 py-0.5 rounded bg-gym-red/20 text-gym-red uppercase tracking-wider">CRM</span>
-            <div className="text-[10px] text-gym-muted -mt-0.5">Indian SaaS Edition</div>
+        <div className="p-4 border-b border-gym-border/80">
+          <Link href="/" className="block group">
+            <div className="relative rounded-2xl bg-gradient-to-b from-white via-white to-slate-100 p-2.5 shadow-xl shadow-red-950/20 border border-white/20 transition-all duration-300 group-hover:shadow-red-600/15 group-hover:scale-[1.01] flex items-center justify-center">
+              <img
+                src="/fitnex-logo.png"
+                alt="FITNEX - Stronger Today | Brighter Tomorrow"
+                className="h-10 w-auto object-contain transition-transform group-hover:scale-105"
+              />
+            </div>
+          </Link>
+          <div className="mt-2 flex items-center justify-between px-1">
+            <span className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Multi-Branch SaaS</span>
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gym-red/20 text-gym-red uppercase tracking-wider border border-gym-red/30">
+              PRO CRM
+            </span>
           </div>
         </div>
 
         {/* Tenant Gym Profile Badge */}
-        <div className="p-4 mx-3 my-3 rounded-xl bg-gym-card/60 border border-gym-border/60">
+        <div className="p-3 mx-3 my-2.5 rounded-xl bg-gym-card/60 border border-gym-border/60">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-gym-emerald font-bold text-xs border border-gym-border">
-              IP
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-gym-red to-red-600 flex items-center justify-center text-white font-black text-xs border border-gym-red/40 shadow-sm">
+              FX
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-white truncate">IronPulse Fitness Club</div>
+              <div className="text-xs font-semibold text-white truncate">FITNEX Fitness Club</div>
               <div className="text-[10px] text-gym-muted flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-gym-emerald animate-pulse"></span>
-                Kolhapur & Pune
+                Kolhapur &amp; Pune
               </div>
             </div>
           </div>
-          <div className="mt-2.5 pt-2 border-t border-gym-border/40 flex items-center justify-between text-[10px] text-gym-muted">
+          <div className="mt-2 pt-2 border-t border-gym-border/40 flex items-center justify-between text-[10px] text-gym-muted">
             <span>GSTIN: 27AAACI1234F1Z5</span>
             <span className="text-emerald-400 font-medium">Verified</span>
           </div>
@@ -178,13 +185,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* TOP APP HEADER */}
         <header className="h-16 border-b border-gym-border bg-gym-surface/60 backdrop-blur-md px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
-            {/* Mobile Hamburger */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg bg-gym-card text-slate-300 hover:text-white"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            {/* Mobile Hamburger & Brand */}
+            <div className="flex items-center gap-2 md:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-lg bg-gym-card text-slate-300 hover:text-white"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+              <Link href="/" className="bg-white rounded-lg px-2 py-1 shadow-sm flex items-center">
+                <img src="/fitnex-logo.png" alt="FITNEX" className="h-6 w-auto object-contain" />
+              </Link>
+            </div>
 
             {/* Branch Selector Dropdown */}
             <div className="flex items-center gap-2 bg-gym-card border border-gym-border px-3 py-1.5 rounded-xl text-xs">

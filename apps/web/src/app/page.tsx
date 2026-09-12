@@ -84,7 +84,7 @@ export default function DashboardPage() {
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-            <span>IronPulse Management Dashboard</span>
+            <span>FITNEX Operations Dashboard</span>
             <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1 font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               Live Sync

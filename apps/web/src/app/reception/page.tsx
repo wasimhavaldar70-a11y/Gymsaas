@@ -215,9 +215,9 @@ export default function ReceptionDeskPage() {
       {/* Top Banner with Reception Stats */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-gym-border">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-gym-red/20 text-gym-red">
-              <QrCode className="w-6 h-6" />
+          <div className="flex items-center gap-3">
+            <div className="bg-white rounded-xl p-1.5 px-2.5 shadow-md flex items-center justify-center border border-white/20">
+              <img src="/fitnex-logo.png" alt="FITNEX" className="h-7 w-auto object-contain" />
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">Reception Check-In Desk</h1>

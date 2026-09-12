@@ -1,6 +1,6 @@
 {
-  "name": "GYMCARE CRM - Multi-Tenant Gym SaaS",
-  "short_name": "GYMCARE",
+  "name": "FITNEX CRM - Multi-Tenant Gym Platform",
+  "short_name": "FITNEX",
   "description": "Enterprise Gym Management SaaS for Indian Fitness Centers",
   "start_url": "/",
   "display": "standalone",
@@ -8,9 +8,9 @@
   "theme_color": "#ef4444",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/fitnex-logo.png",
+      "sizes": "1024x341",
+      "type": "image/png"
     }
   ]
 }

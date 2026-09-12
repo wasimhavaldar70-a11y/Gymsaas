@@ -413,12 +413,21 @@ export default function BillingPage() {
               </button>
             </div>
 
-            {/* Business Header */}
-            <div className="text-xs space-y-1">
-              <div className="font-black text-sm">IronPulse Fitness Club</div>
-              <div>Plot 45, Tarabai Park, Kolhapur, Maharashtra - 416003</div>
-              <div className="font-mono font-bold">GSTIN: 27AAACI1234F1Z5</div>
-              <div>Contact: +91 98220 12345 | contact@ironpulse.in</div>
+            {/* Business Header with FITNEX Logo */}
+            <div className="flex items-start justify-between border-b pb-3">
+              <div>
+                <img src="/fitnex-logo.png" alt="FITNEX" className="h-10 w-auto object-contain mb-1.5" />
+                <div className="font-black text-sm text-gray-900">FITNEX FITNESS &amp; HEALTH CLUB</div>
+                <div className="text-xs text-gray-600">Plot 45, Tarabai Park, Kolhapur, Maharashtra - 416003</div>
+                <div className="font-mono font-bold text-xs text-gray-800">GSTIN: 27AAACI1234F1Z5</div>
+                <div className="text-xs text-gray-600">Contact: +91 98220 12345 | contact@fitnex.in</div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs uppercase tracking-widest font-bold bg-gray-900 text-white px-2.5 py-1 rounded">
+                  TAX INVOICE
+                </span>
+                <div className="text-[10px] text-gray-500 mt-1 font-mono">ORIGINAL FOR RECIPIENT</div>
+              </div>
             </div>
 
             {/* Bill Details */}

@@ -6,23 +6,23 @@ import { Dumbbell, ShieldCheck, Lock, Mail, ArrowRight, CheckCircle2 } from "luc
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("owner@ironpulse.in");
+  const [email, setEmail] = useState("owner@fitnex.in");
   const [password, setPassword] = useState("••••••••••••");
   const [selectedRole, setSelectedRole] = useState("GYM_OWNER");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const quickRoles = [
-    { label: "Gym Owner", role: "GYM_OWNER", email: "owner@ironpulse.in" },
-    { label: "Receptionist", role: "RECEPTIONIST", email: "reception@ironpulse.in" },
-    { label: "Trainer", role: "TRAINER", email: "trainer@ironpulse.in" },
-    { label: "Accountant", role: "ACCOUNTANT", email: "accountant@ironpulse.in" }
+    { label: "Gym Owner", role: "GYM_OWNER", email: "owner@fitnex.in" },
+    { label: "Receptionist", role: "RECEPTIONIST", email: "reception@fitnex.in" },
+    { label: "Trainer", role: "TRAINER", email: "trainer@fitnex.in" },
+    { label: "Accountant", role: "ACCOUNTANT", email: "accountant@fitnex.in" }
   ];
 
   const handleQuickSelect = (item: typeof quickRoles[0]) => {
     setSelectedRole(item.role);
     setEmail(item.email);
-    setPassword("gymcare2026");
+    setPassword("fitnex2026");
     setErrorMessage(null);
   };
 
@@ -58,19 +58,23 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gym-bg text-gym-text flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo & Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-gym-red to-red-600 shadow-xl shadow-red-500/20 text-white mb-4">
-            <Dumbbell className="w-8 h-8" />
+        {/* Logo & Brand Showcase */}
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="relative group p-4 px-6 rounded-2xl bg-gradient-to-b from-white via-white to-slate-100 shadow-2xl shadow-red-950/25 border border-white/40 backdrop-blur-xl flex items-center justify-center mb-4 transition-all duration-300 hover:shadow-red-600/20 hover:scale-[1.02]">
+            <img
+              src="/fitnex-logo.png"
+              alt="FITNEX - Stronger Today | Brighter Tomorrow"
+              className="h-16 md:h-20 w-auto object-contain drop-shadow-sm"
+            />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
-            <span>GYMCARE</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gym-red/20 text-gym-red uppercase tracking-wider">
-              CRM
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-300">Enterprise Fitness Management</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gym-red/20 text-gym-red border border-gym-red/30 uppercase tracking-wider">
+              PRO CRM
             </span>
-          </h1>
-          <p className="text-sm text-gym-muted mt-1.5">
-            Indian Multi-Tenant Gym Management SaaS Platform
+          </div>
+          <p className="text-xs text-gym-muted mt-1.5">
+            Commercial Multi-Branch Gym Management &amp; Billing SaaS
           </p>
         </div>
 
