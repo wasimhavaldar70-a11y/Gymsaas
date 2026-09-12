@@ -1,0 +1,30 @@
+{
+  "name": "gymcare-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise Multi-Tenant Gym Management CRM SaaS for Indian Fitness Businesses",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npx tsx --test tests/security/multi_tenant_isolation.test.ts"
+  },
+  "keywords": [
+    "gym-crm",
+    "multi-tenant",
+    "saas",
+    "supabase",
+    "nextjs",
+    "fastify",
+    "india-gst"
+  ],
+  "author": "GYMCARE CRM Team",
+  "license": "UNLICENSED"
+}
