@@ -254,4 +254,20 @@ export async function membershipRoutes(app: FastifyInstance) {
       }
     });
   });
+
+  // Automated Membership Expiry Procedure (OPS-001)
+  app.post("/auto-expire", { preHandler: [authenticate, requirePermission("plans.manage")] }, async (request, reply) => {
+    const tenant = request.tenant!;
+
+    const { data, error } = await supabaseAdmin.rpc("rpc_expire_outdated_memberships", {
+      p_org_id: tenant.organizationId
+    });
+
+    if (error) throw error;
+
+    return reply.status(200).send({
+      success: true,
+      data: data || { expired_memberships: 0, expired_members: 0 }
+    });
+  });
 }

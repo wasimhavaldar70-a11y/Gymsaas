@@ -92,14 +92,24 @@ export async function leadRoutes(app: FastifyInstance) {
     const firstName = nameParts[0] || lead.name;
     const lastName = nameParts.slice(1).join(" ") || "Member";
 
-    // Generate Member ID
-    const { count } = await supabaseAdmin
-      .from("members")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", tenant.organizationId);
+    // Generate collision-free sequential Member ID (FIX-CONCUR-002)
+    let seqNumber: number;
+    const { data: seqData, error: seqError } = await supabaseAdmin.rpc("get_next_org_sequence", {
+      p_org_id: tenant.organizationId,
+      p_type: "MEMBER"
+    });
 
-    const seq = ((count || 0) + 1).toString().padStart(4, "0");
-    const memberId = `MEM-${seq}`;
+    if (!seqError && seqData) {
+      seqNumber = Number(seqData);
+    } else {
+      const { count } = await supabaseAdmin
+        .from("members")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", tenant.organizationId);
+      seqNumber = (count || 0) + 1;
+    }
+
+    const memberId = `MEM-${seqNumber.toString().padStart(4, "0")}`;
 
     // Create Member
     const { data: newMember, error: memberErr } = await supabaseAdmin

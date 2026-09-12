@@ -126,6 +126,45 @@ export async function workoutRoutes(app: FastifyInstance) {
 
     const { exercises, ...planData } = parseResult.data;
 
+    // Validate branch belongs to organization (FIX-SEC-001)
+    const { data: bValid } = await supabaseAdmin
+      .from("branches")
+      .select("id")
+      .eq("id", planData.branch_id)
+      .eq("organization_id", tenant.organizationId)
+      .maybeSingle();
+
+    if (!bValid) {
+      throw new ValidationError("Invalid branch_id for this gym organization");
+    }
+
+    // Validate member belongs to organization (FIX-SEC-001)
+    const { data: mValid } = await supabaseAdmin
+      .from("members")
+      .select("id")
+      .eq("id", planData.member_id)
+      .eq("organization_id", tenant.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (!mValid) {
+      throw new ValidationError("Invalid member_id for this gym organization");
+    }
+
+    // Validate trainer belongs to organization if provided
+    if (planData.trainer_id) {
+      const { data: tValid } = await supabaseAdmin
+        .from("trainers")
+        .select("id")
+        .eq("id", planData.trainer_id)
+        .eq("organization_id", tenant.organizationId)
+        .maybeSingle();
+
+      if (!tValid) {
+        throw new ValidationError("Invalid trainer_id for this gym organization");
+      }
+    }
+
     const { data: newPlan, error: planError } = await supabaseAdmin
       .from("workout_plans")
       .insert({

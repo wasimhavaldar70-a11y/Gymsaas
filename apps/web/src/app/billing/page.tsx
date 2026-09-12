@@ -50,6 +50,19 @@ export default function BillingPage() {
     queryFn: () => fetchApi<PaginatedResult<Member>>("/members?page_size=100")
   });
 
+  // Query branches and organization profile (FIX-UX-001, FIX-UX-002)
+  const { data: branches } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["branches"],
+    queryFn: () => fetchApi<{ id: string; name: string }[]>("/branches")
+  });
+
+  const { data: profileData } = useQuery<{ organization: { state_code?: string } }>({
+    queryKey: ["auth-me"],
+    queryFn: () => fetchApi<{ organization: { state_code?: string } }>("/auth/me")
+  });
+
+  const orgStateCode = profileData?.organization?.state_code || "27";
+
   // Selected plan calculation
   const currentPlan = (plans || []).find((p) => p.id === selectedPlanId);
   const finalPrice = Math.max(0, (currentPlan?.price || 0) - (Number(discountAmount) || 0));
@@ -58,8 +71,8 @@ export default function BillingPage() {
         amount: finalPrice,
         taxRate: currentPlan.tax_rate,
         isInclusive: currentPlan.is_tax_inclusive,
-        supplierStateCode: "27",
-        recipientStateCode: "27"
+        supplierStateCode: orgStateCode,
+        recipientStateCode: orgStateCode
       })
     : null;
 
@@ -99,9 +112,13 @@ export default function BillingPage() {
       return;
     }
 
-    const activeBranchId =
-      (typeof window !== "undefined" && localStorage.getItem("gymcare_selected_branch")) ||
-      "00000000-0000-0000-0000-000000000011";
+    const savedBranch = typeof window !== "undefined" ? localStorage.getItem("gymcare_selected_branch") : null;
+    const activeBranchId = savedBranch && savedBranch !== "all" ? savedBranch : (branches?.[0]?.id || "");
+
+    if (!activeBranchId) {
+      setFormError("No active gym branch available. Please register a branch first.");
+      return;
+    }
 
     assignMembershipMutation.mutate({
       branch_id: activeBranchId,
@@ -305,7 +322,7 @@ export default function BillingPage() {
                     <option value="CASH">Cash</option>
                     <option value="CARD">Debit / Credit Card</option>
                     <option value="BANK_TRANSFER">Bank Transfer / NEFT</option>
-                    <option value="RAZORPAY">Razorpay Online</option>
+                    <option value="CHEQUE">Cheque / Demand Draft</option>
                   </select>
                 </div>
               </div>

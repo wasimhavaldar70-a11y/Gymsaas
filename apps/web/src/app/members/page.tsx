@@ -53,12 +53,17 @@ export default function MembersPage() {
     }
   });
 
+  // Query branches dynamically (FIX-UX-001)
+  const { data: branches } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["branches"],
+    queryFn: () => fetchApi<{ id: string; name: string }[]>("/branches")
+  });
+
   // Create member mutation
   const createMemberMutation = useMutation({
     mutationFn: (newMember: any) => {
-      const activeBranchId =
-        (typeof window !== "undefined" && localStorage.getItem("gymcare_selected_branch")) ||
-        "00000000-0000-0000-0000-000000000011";
+      const savedBranch = typeof window !== "undefined" ? localStorage.getItem("gymcare_selected_branch") : null;
+      const activeBranchId = savedBranch && savedBranch !== "all" ? savedBranch : (branches?.[0]?.id || "");
 
       return fetchApi<Member>("/members", {
         method: "POST",

@@ -27,10 +27,80 @@ export default function ReceptionDeskPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const [offlineQueueCount, setOfflineQueueCount] = useState<number>(0);
 
-  // Keep search input focused for high-speed barcode / QR scanner guns & reception typing
+  // Query tenant branches dynamically (FIX-UX-001)
+  const { data: branches } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["branches"],
+    queryFn: () => fetchApi<{ id: string; name: string }[]>("/branches")
+  });
+
+  const getOfflineQueue = (): { identifier: string; branchId: string; timestamp: string }[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      const q = localStorage.getItem("gymcare_offline_attendance");
+      return q ? JSON.parse(q) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveOfflineQueue = (items: { identifier: string; branchId: string; timestamp: string }[]) => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("gymcare_offline_attendance", JSON.stringify(items));
+      setOfflineQueueCount(items.length);
+    } catch {}
+  };
+
+  const syncOfflineQueue = async () => {
+    const queue = getOfflineQueue();
+    if (queue.length === 0) return;
+
+    let synced = 0;
+    const remaining: typeof queue = [];
+
+    for (const item of queue) {
+      try {
+        await fetchApi("/attendance/check-in", {
+          method: "POST",
+          body: JSON.stringify({
+            branch_id: item.branchId,
+            member_identifier: item.identifier,
+            method: "SEARCH"
+          })
+        });
+        synced++;
+      } catch (err: any) {
+        if (err.status === 409 || err.message?.includes("already")) {
+          synced++;
+        } else {
+          remaining.push(item);
+        }
+      }
+    }
+
+    saveOfflineQueue(remaining);
+    if (synced > 0) {
+      queryClient.invalidateQueries({ queryKey: ["attendance-today"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      setFeedback({
+        type: "success",
+        message: `Network restored: Successfully synced ${synced} offline check-in record(s).`
+      });
+    }
+  };
+
   useEffect(() => {
     searchInputRef.current?.focus();
+    setOfflineQueueCount(getOfflineQueue().length);
+
+    const handleOnline = () => {
+      syncOfflineQueue();
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
   }, []);
 
   // Fetch today's live attendee roster
@@ -44,28 +114,70 @@ export default function ReceptionDeskPage() {
     refetchInterval: 10_000 // Refresh every 10s or upon mutations
   });
 
-  // Check-in Mutation
+  // Check-in Mutation with Offline Fallback (FIX-SYNC-001)
   const checkInMutation = useMutation({
-    mutationFn: (memberIdentifier: string) => {
-      const activeBranchId =
-        (typeof window !== "undefined" && localStorage.getItem("gymcare_selected_branch")) ||
-        "00000000-0000-0000-0000-000000000011";
+    mutationFn: async (memberIdentifier: string) => {
+      const savedBranch = typeof window !== "undefined" ? localStorage.getItem("gymcare_selected_branch") : null;
+      const activeBranchId = savedBranch && savedBranch !== "all" ? savedBranch : (branches?.[0]?.id || "");
 
-      return fetchApi<{
-        already_checked_in: boolean;
-        message: string;
-        data: any;
-      }>("/attendance/check-in", {
-        method: "POST",
-        body: JSON.stringify({
-          branch_id: activeBranchId,
-          member_identifier: memberIdentifier,
-          method: "SEARCH"
-        })
-      });
+      // If browser is offline, queue locally immediately
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const queue = getOfflineQueue();
+        queue.push({
+          identifier: memberIdentifier,
+          branchId: activeBranchId,
+          timestamp: new Date().toISOString()
+        });
+        saveOfflineQueue(queue);
+        return {
+          already_checked_in: false,
+          offline_queued: true,
+          message: `Offline: Check-in queued locally for ${memberIdentifier}. Will auto-sync when online.`,
+          data: null
+        };
+      }
+
+      try {
+        return await fetchApi<{
+          already_checked_in: boolean;
+          offline_queued?: boolean;
+          message: string;
+          data: any;
+        }>("/attendance/check-in", {
+          method: "POST",
+          body: JSON.stringify({
+            branch_id: activeBranchId,
+            member_identifier: memberIdentifier,
+            method: "SEARCH"
+          })
+        });
+      } catch (err: any) {
+        // Network disconnection during fetch: queue locally
+        if (err.code === "NETWORK_ERROR" || !navigator.onLine) {
+          const queue = getOfflineQueue();
+          queue.push({
+            identifier: memberIdentifier,
+            branchId: activeBranchId,
+            timestamp: new Date().toISOString()
+          });
+          saveOfflineQueue(queue);
+          return {
+            already_checked_in: false,
+            offline_queued: true,
+            message: `Network offline: Check-in queued for ${memberIdentifier}. Will auto-sync when online.`,
+            data: null
+          };
+        }
+        throw err;
+      }
     },
-    onSuccess: (res) => {
-      if (res.already_checked_in) {
+    onSuccess: (res: any) => {
+      if (res.offline_queued) {
+        setFeedback({
+          type: "warning",
+          message: res.message
+        });
+      } else if (res.already_checked_in) {
         setFeedback({
           type: "warning",
           message: res.message,
@@ -119,6 +231,13 @@ export default function ReceptionDeskPage() {
             <div className="text-[10px] text-gym-muted uppercase font-bold tracking-wider">Today Checked In</div>
             <div className="text-xl font-mono font-black text-cyan-400">{todayAttendance?.count ?? 0}</div>
           </div>
+
+          {offlineQueueCount > 0 && (
+            <div className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center flex-1 sm:flex-initial animate-pulse">
+              <div className="text-[10px] text-amber-400 uppercase font-bold tracking-wider">Offline Queued</div>
+              <div className="text-xl font-mono font-black text-amber-400">{offlineQueueCount}</div>
+            </div>
+          )}
 
           <Link
             href="/members?action=new"

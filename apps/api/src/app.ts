@@ -26,6 +26,7 @@ import { settingsRoutes } from "./modules/settings/settings.controller.js";
 
 export function buildApp() {
   const app = fastify({
+    trustProxy: true,
     genReqId: (req: IncomingMessage) => {
       const headerVal = req.headers["x-request-id"];
       if (Array.isArray(headerVal)) return headerVal[0];

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { calculateGst } from "../../packages/shared/src/gst.js";
 import { MemberCreateSchema, indianMobileRegex, gstinRegex } from "../../packages/shared/src/schemas.js";
 import { ROLE_PERMISSIONS, hasPermission } from "../../packages/shared/src/permissions.js";
+import { PAYMENT_METHODS } from "../../packages/shared/src/constants.js";
 
 describe("GYMCARE CRM - Multi-Tenant Security & Business Logic Verification", () => {
   // 1. RBAC & TENANT PERMISSION ISOLATION
@@ -164,6 +165,68 @@ describe("GYMCARE CRM - Multi-Tenant Security & Business Logic Verification", ()
 
     assert.equal(res.statusCode, 200);
     assert.ok(res.headers["x-ratelimit-limit"] !== undefined || res.statusCode === 200);
+    await app.close();
+  });
+
+  // 5. RAZORPAY REMOVAL VERIFICATION
+  it("PAYMENT_METHODS does NOT include RAZORPAY and only allows direct payments", () => {
+    assert.equal((PAYMENT_METHODS as readonly string[]).includes("RAZORPAY"), false);
+    assert.equal((PAYMENT_METHODS as readonly string[]).includes("CASH"), true);
+    assert.equal((PAYMENT_METHODS as readonly string[]).includes("UPI"), true);
+    assert.equal((PAYMENT_METHODS as readonly string[]).includes("CARD"), true);
+    assert.equal((PAYMENT_METHODS as readonly string[]).includes("BANK_TRANSFER"), true);
+    assert.equal((PAYMENT_METHODS as readonly string[]).includes("CHEQUE"), true);
+  });
+
+  // 6. CROSS-TENANT IDOR ENTITY VALIDATION TESTS
+  it("Workout plan creation rejects cross-tenant or non-existent member with HTTP 400", async () => {
+    const { buildApp } = await import("../../apps/api/src/app.js");
+    const app = buildApp();
+    await app.ready();
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/workouts/plans",
+      headers: {
+        authorization: "Bearer mock-role-trainer"
+      },
+      payload: {
+        branch_id: "00000000-0000-0000-0000-000000000011",
+        member_id: "99999999-9999-9999-9999-999999999999", // non-existent / cross-tenant
+        title: "Hypertrophy Phase 1",
+        goal: "Muscle Gain"
+      }
+    });
+
+    // Must reject with validation error (400) because member does not belong to tenant
+    assert.equal(res.statusCode, 400);
+    const body = JSON.parse(res.body);
+    assert.equal(body.success, false);
+    await app.close();
+  });
+
+  it("Body measurement creation rejects cross-tenant or non-existent member with HTTP 400", async () => {
+    const { buildApp } = await import("../../apps/api/src/app.js");
+    const app = buildApp();
+    await app.ready();
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/diets/measurements",
+      headers: {
+        authorization: "Bearer mock-role-trainer"
+      },
+      payload: {
+        branch_id: "00000000-0000-0000-0000-000000000011",
+        member_id: "99999999-9999-9999-9999-999999999999", // non-existent / cross-tenant
+        weight_kg: 78.5
+      }
+    });
+
+    // Must reject with validation error (400)
+    assert.equal(res.statusCode, 400);
+    const body = JSON.parse(res.body);
+    assert.equal(body.success, false);
     await app.close();
   });
 });

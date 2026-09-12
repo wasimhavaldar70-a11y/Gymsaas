@@ -76,6 +76,45 @@ export async function dietRoutes(app: FastifyInstance) {
 
     const { meals, ...dietData } = parseResult.data;
 
+    // Validate branch belongs to organization (FIX-SEC-002)
+    const { data: bValid } = await supabaseAdmin
+      .from("branches")
+      .select("id")
+      .eq("id", dietData.branch_id)
+      .eq("organization_id", tenant.organizationId)
+      .maybeSingle();
+
+    if (!bValid) {
+      throw new ValidationError("Invalid branch_id for this gym organization");
+    }
+
+    // Validate member belongs to organization (FIX-SEC-002)
+    const { data: mValid } = await supabaseAdmin
+      .from("members")
+      .select("id")
+      .eq("id", dietData.member_id)
+      .eq("organization_id", tenant.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (!mValid) {
+      throw new ValidationError("Invalid member_id for this gym organization");
+    }
+
+    // Validate trainer belongs to organization if provided
+    if (dietData.trainer_id) {
+      const { data: tValid } = await supabaseAdmin
+        .from("trainers")
+        .select("id")
+        .eq("id", dietData.trainer_id)
+        .eq("organization_id", tenant.organizationId)
+        .maybeSingle();
+
+      if (!tValid) {
+        throw new ValidationError("Invalid trainer_id for this gym organization");
+      }
+    }
+
     const { data: newDiet, error: dietError } = await supabaseAdmin
       .from("diet_plans")
       .insert({
@@ -112,6 +151,19 @@ export async function dietRoutes(app: FastifyInstance) {
       throw new ValidationError("member_id query param is required");
     }
 
+    // Validate member belongs to organization
+    const { data: mValid } = await supabaseAdmin
+      .from("members")
+      .select("id")
+      .eq("id", member_id)
+      .eq("organization_id", tenant.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (!mValid) {
+      throw new ValidationError("Invalid member_id for this gym organization");
+    }
+
     const { data, error } = await supabaseAdmin
       .from("body_measurements")
       .select("*")
@@ -134,6 +186,31 @@ export async function dietRoutes(app: FastifyInstance) {
 
     if (!parseResult.success) {
       throw new ValidationError("Invalid measurement data", parseResult.error.format());
+    }
+
+    // Validate branch belongs to organization (FIX-SEC-002)
+    const { data: bValid } = await supabaseAdmin
+      .from("branches")
+      .select("id")
+      .eq("id", parseResult.data.branch_id)
+      .eq("organization_id", tenant.organizationId)
+      .maybeSingle();
+
+    if (!bValid) {
+      throw new ValidationError("Invalid branch_id for this gym organization");
+    }
+
+    // Validate member belongs to organization (FIX-SEC-002)
+    const { data: mValid } = await supabaseAdmin
+      .from("members")
+      .select("id")
+      .eq("id", parseResult.data.member_id)
+      .eq("organization_id", tenant.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (!mValid) {
+      throw new ValidationError("Invalid member_id for this gym organization");
     }
 
     const { weight_kg, height_cm } = parseResult.data;

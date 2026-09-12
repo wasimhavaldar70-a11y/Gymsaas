@@ -28,6 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("all");
+  const [branches, setBranches] = useState<{ id: string; name: string; code: string }[]>([]);
   const [orgId, setOrgId] = useState<string | undefined>(undefined);
   const [userRole, setUserRole] = useState<string>("GYM_OWNER");
 
@@ -47,9 +48,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       .then((res) => {
         if (res?.organization?.id) setOrgId(res.organization.id);
       })
-      .catch(() => {
-        setOrgId("00000000-0000-0000-0000-000000000001");
-      });
+      .catch(() => {});
+
+    // Fetch tenant branches dynamically (FIX-UX-001)
+    fetchApi<{ id: string; name: string; code: string }[]>("/branches")
+      .then((res) => {
+        if (Array.isArray(res)) setBranches(res);
+      })
+      .catch(() => {});
   }, []);
 
   // Activate background realtime synchronization for authenticated tenant
@@ -189,8 +195,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
               >
                 <option value="all" className="bg-gym-card text-white">All Branches (Organization)</option>
-                <option value="00000000-0000-0000-0000-000000000011" className="bg-gym-card text-white">Kolhapur Central Branch</option>
-                <option value="00000000-0000-0000-0000-000000000012" className="bg-gym-card text-white">Pune Kothrud Branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id} className="bg-gym-card text-white">
+                    {b.name} ({b.code})
+                  </option>
+                ))}
               </select>
             </div>
           </div>

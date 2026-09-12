@@ -201,36 +201,38 @@ export async function memberRoutes(app: FastifyInstance) {
 
     const { version, ...updateFields } = parseResult.data;
 
-    // Concurrency check: Ensure record version matches
-    const { data: currentMember, error: fetchError } = await supabaseAdmin
-      .from("members")
-      .select("id, version")
-      .eq("id", id)
-      .eq("organization_id", tenant.organizationId)
-      .single();
-
-    if (fetchError || !currentMember) {
-      throw new NotFoundError("Member", id);
-    }
-
-    if (currentMember.version !== version) {
-      throw new ConflictError(
-        "This member was updated on another device. Please refresh and review the latest details."
-      );
-    }
-
+    // Atomic Concurrency Update: Update ONLY IF current version matches client version (FIX-CONCUR-001)
     const { data: updatedMember, error: updateError } = await supabaseAdmin
       .from("members")
       .update({
         ...updateFields,
-        version: currentMember.version + 1
+        version: version + 1
       })
       .eq("id", id)
       .eq("organization_id", tenant.organizationId)
+      .eq("version", version)
       .select()
-      .single();
+      .maybeSingle();
 
     if (updateError) throw updateError;
+
+    if (!updatedMember) {
+      // Check if member exists or if version conflicted
+      const { data: exists } = await supabaseAdmin
+        .from("members")
+        .select("id, version")
+        .eq("id", id)
+        .eq("organization_id", tenant.organizationId)
+        .maybeSingle();
+
+      if (!exists) {
+        throw new NotFoundError("Member", id);
+      }
+
+      throw new ConflictError(
+        "This member was updated on another device. Please refresh and review the latest details."
+      );
+    }
 
     return {
       success: true,

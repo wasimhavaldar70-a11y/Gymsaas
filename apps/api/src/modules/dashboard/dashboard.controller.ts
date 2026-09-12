@@ -56,7 +56,8 @@ export async function dashboardRoutes(app: FastifyInstance) {
       expiringSoonRes,
       paymentsRes,
       todayPaymentsRes,
-      recentAttendanceRes
+      recentAttendanceRes,
+      activePlansRes
     ] = await Promise.all([
       // Total members
       withBranch(
@@ -119,12 +120,12 @@ export async function dashboardRoutes(app: FastifyInstance) {
           .lte("end_date", sevenDaysLaterStr)
           .gte("end_date", todayKolkata)
       ),
-      // Month payments (sum amount) - only if permitted (FIX-06)
+      // Month payments (sum amount & dates) - only if permitted (FIX-06)
       canViewFinancials
         ? withBranch(
             supabaseAdmin
               .from("payments")
-              .select("amount")
+              .select("amount, payment_date")
               .eq("organization_id", tenant.organizationId)
               .gte("payment_date", startOfMonthKolkata)
               .limit(5000)
@@ -149,6 +150,15 @@ export async function dashboardRoutes(app: FastifyInstance) {
           .eq("organization_id", tenant.organizationId)
           .gte("date", new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0])
           .limit(10000)
+      ),
+      // Active membership plans for real distribution chart (FIX-PERF-001)
+      withBranch(
+        supabaseAdmin
+          .from("memberships")
+          .select("plan_name")
+          .eq("organization_id", tenant.organizationId)
+          .eq("status", "ACTIVE")
+          .limit(2000)
       )
     ]);
 
@@ -176,6 +186,38 @@ export async function dashboardRoutes(app: FastifyInstance) {
       count
     }));
 
+    // Real Daily Revenue Trend (Last 7 Days) (FIX-PERF-001)
+    const revenueMap: Record<string, number> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().split("T")[0];
+      revenueMap[d] = 0;
+    }
+    if (canViewFinancials) {
+      (paymentsRes.data || []).forEach((p: any) => {
+        const pDate = (p.payment_date || "").split("T")[0];
+        if (revenueMap[pDate] !== undefined) {
+          revenueMap[pDate] += Number(p.amount) || 0;
+        }
+      });
+    }
+
+    const revenueTrend = Object.entries(revenueMap).map(([date, amount]) => ({
+      date: new Date(date).toLocaleDateString("en-IN", { month: "short", day: "numeric" }),
+      amount
+    }));
+
+    // Real Active Membership Distribution (FIX-PERF-001)
+    const planCounts: Record<string, number> = {};
+    (activePlansRes?.data || []).forEach((row: any) => {
+      const planName = row.plan_name || "General Plan";
+      planCounts[planName] = (planCounts[planName] || 0) + 1;
+    });
+
+    const membershipDistribution = Object.entries(planCounts).map(([name, value]) => ({
+      name,
+      value
+    }));
+
     return {
       success: true,
       data: {
@@ -191,18 +233,11 @@ export async function dashboardRoutes(app: FastifyInstance) {
         active_trainers: activeTrainersRes.count || 0,
         charts: {
           attendance_trend: attendanceTrend,
-          revenue_trend: [
-            { date: "Day 1", amount: Math.round(monthlyRevenue * 0.15) },
-            { date: "Day 5", amount: Math.round(monthlyRevenue * 0.35) },
-            { date: "Day 10", amount: Math.round(monthlyRevenue * 0.6) },
-            { date: "Today", amount: monthlyRevenue }
-          ],
-          membership_distribution: [
-            { name: "1 Month", value: 35 },
-            { name: "3 Months", value: 25 },
-            { name: "6 Months", value: 20 },
-            { name: "12 Months", value: 20 }
-          ]
+          revenue_trend: revenueTrend,
+          membership_distribution:
+            membershipDistribution.length > 0
+              ? membershipDistribution
+              : [{ name: "Active Members", value: activeMembersRes.count || 0 }]
         }
       }
     };

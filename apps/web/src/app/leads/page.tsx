@@ -42,16 +42,26 @@ export default function LeadsPage() {
     }
   });
 
+  // Query tenant branches dynamically (FIX-UX-001)
+  const { data: branches } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["branches"],
+    queryFn: () => fetchApi<{ id: string; name: string }[]>("/branches")
+  });
+
   // Create Lead Mutation
   const createLeadMutation = useMutation({
-    mutationFn: (newLead: any) =>
-      fetchApi("/leads", {
+    mutationFn: (newLead: any) => {
+      const savedBranch = typeof window !== "undefined" ? localStorage.getItem("gymcare_selected_branch") : null;
+      const activeBranchId = savedBranch && savedBranch !== "all" ? savedBranch : (branches?.[0]?.id || "");
+
+      return fetchApi("/leads", {
         method: "POST",
         body: JSON.stringify({
-          branch_id: "00000000-0000-0000-0000-000000000011",
+          branch_id: activeBranchId,
           ...newLead
         })
-      }),
+      });
+    },
     onSuccess: () => {
       setIsAddLeadOpen(false);
       setFormData({ name: "", mobile: "", email: "", source: "WALK_IN", notes: "" });

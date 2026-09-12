@@ -48,7 +48,7 @@ export const PAYMENT_METHODS = [
   "UPI",
   "CARD",
   "BANK_TRANSFER",
-  "RAZORPAY"
+  "CHEQUE"
 ] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
