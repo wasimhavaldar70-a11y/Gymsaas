@@ -16,6 +16,12 @@ import { membershipRoutes } from "./modules/memberships/memberships.controller.j
 import { paymentRoutes } from "./modules/payments/payments.controller.js";
 import { invoiceRoutes } from "./modules/invoices/invoices.controller.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.controller.js";
+import { trainerRoutes } from "./modules/trainers/trainers.controller.js";
+import { workoutRoutes } from "./modules/workouts/workouts.controller.js";
+import { dietRoutes } from "./modules/diets/diets.controller.js";
+import { leadRoutes } from "./modules/leads/leads.controller.js";
+import { reportRoutes } from "./modules/reports/reports.controller.js";
+import { settingsRoutes } from "./modules/settings/settings.controller.js";
 
 export function buildApp() {
   const app = fastify({
@@ -89,6 +95,12 @@ export function buildApp() {
   app.register(paymentRoutes, { prefix: "/api/v1/payments" });
   app.register(invoiceRoutes, { prefix: "/api/v1/invoices" });
   app.register(dashboardRoutes, { prefix: "/api/v1/dashboard" });
+  app.register(trainerRoutes, { prefix: "/api/v1/trainers" });
+  app.register(workoutRoutes, { prefix: "/api/v1/workouts" });
+  app.register(dietRoutes, { prefix: "/api/v1/diets" });
+  app.register(leadRoutes, { prefix: "/api/v1/leads" });
+  app.register(reportRoutes, { prefix: "/api/v1/reports" });
+  app.register(settingsRoutes, { prefix: "/api/v1/settings" });
 
   return app;
 }

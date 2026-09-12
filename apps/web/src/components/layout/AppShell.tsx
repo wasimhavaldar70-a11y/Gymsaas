@@ -54,6 +54,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { label: "Members", href: "/members", icon: Users },
     { label: "Billing & GST", href: "/billing", icon: CreditCard },
     { label: "Attendance Log", href: "/attendance", icon: CalendarCheck },
+    { label: "Leads CRM", href: "/leads", icon: Bell },
+    { label: "Workouts", href: "/workouts", icon: Dumbbell },
+    { label: "GST Reports", href: "/reports", icon: Building2 },
   ];
 
   return (

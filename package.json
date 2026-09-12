@@ -14,7 +14,7 @@
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api && npm run build --workspace=apps/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npx tsx --test tests/security/multi_tenant_isolation.test.ts"
+    "test": "npx tsx --test tests/security/multi_tenant_isolation.test.ts tests/e2e/full_gym_lifecycle.test.ts"
   },
   "keywords": [
     "gym-crm",
