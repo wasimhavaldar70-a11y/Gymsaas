@@ -84,7 +84,21 @@ export async function attendanceRoutes(app: FastifyInstance) {
       .select()
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      // Gracefully handle concurrent check-in collision on uq_attendance_day (CONCUR-002)
+      if ((insertError as any).code === "23505" || insertError.message?.includes("uq_attendance_day")) {
+        return reply.status(200).send({
+          success: true,
+          already_checked_in: true,
+          message: `${member.first_name} ${member.last_name} has already checked in today.`,
+          data: {
+            member,
+            check_in_time: new Date().toISOString()
+          }
+        });
+      }
+      throw insertError;
+    }
 
     // Check active membership health
     const activeMembership = (member.memberships as any[])?.find(
@@ -110,10 +124,10 @@ export async function attendanceRoutes(app: FastifyInstance) {
     });
   });
 
-  // Get Today's Live Attendance Feed
+  // Get Today's or Historical Live Attendance Feed (FIX-10)
   app.get("/today", { preHandler: [authenticate, requirePermission("attendance.view")] }, async (request) => {
     const tenant = request.tenant!;
-    const { branch_id } = request.query as { branch_id?: string };
+    const { branch_id, date } = request.query as { branch_id?: string; date?: string };
 
     const todayKolkata = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Kolkata",
@@ -121,6 +135,8 @@ export async function attendanceRoutes(app: FastifyInstance) {
       month: "2-digit",
       day: "2-digit"
     }).format(new Date());
+
+    const targetDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : todayKolkata;
 
     let query = supabaseAdmin
       .from("attendance")
@@ -130,7 +146,7 @@ export async function attendanceRoutes(app: FastifyInstance) {
         branches (name, code)
       `)
       .eq("organization_id", tenant.organizationId)
-      .eq("date", todayKolkata)
+      .eq("date", targetDate)
       .order("check_in", { ascending: false });
 
     if (branch_id) {
@@ -146,7 +162,7 @@ export async function attendanceRoutes(app: FastifyInstance) {
       success: true,
       data: data || [],
       count: data?.length || 0,
-      date: todayKolkata
+      date: targetDate
     };
   });
 }

@@ -1,11 +1,28 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "../../middleware/auth.js";
 import { supabaseAdmin } from "../../lib/supabase.js";
+import { hasPermission } from "@gymcare/shared";
+import { ValidationError } from "../../lib/errors.js";
 
 export async function dashboardRoutes(app: FastifyInstance) {
   app.get("/metrics", { preHandler: [authenticate] }, async (request) => {
     const tenant = request.tenant!;
     const { branch_id } = request.query as { branch_id?: string };
+
+    const canViewFinancials = hasPermission(tenant.permissions, "reports.financial");
+
+    if (branch_id) {
+      const { data: bValid } = await supabaseAdmin
+        .from("branches")
+        .select("id")
+        .eq("id", branch_id)
+        .eq("organization_id", tenant.organizationId)
+        .maybeSingle();
+
+      if (!bValid) {
+        throw new ValidationError("Invalid branch_id for this gym organization");
+      }
+    }
 
     const todayKolkata = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Kolkata",
@@ -102,34 +119,45 @@ export async function dashboardRoutes(app: FastifyInstance) {
           .lte("end_date", sevenDaysLaterStr)
           .gte("end_date", todayKolkata)
       ),
-      // Month payments (sum amount)
-      withBranch(
-        supabaseAdmin
-          .from("payments")
-          .select("amount, payment_date")
-          .eq("organization_id", tenant.organizationId)
-          .gte("payment_date", startOfMonthKolkata)
-      ),
-      // Today's payments
-      withBranch(
-        supabaseAdmin
-          .from("payments")
-          .select("amount")
-          .eq("organization_id", tenant.organizationId)
-          .gte("payment_date", `${todayKolkata}T00:00:00`)
-      ),
-      // Last 7 days attendance for trend chart
+      // Month payments (sum amount) - only if permitted (FIX-06)
+      canViewFinancials
+        ? withBranch(
+            supabaseAdmin
+              .from("payments")
+              .select("amount")
+              .eq("organization_id", tenant.organizationId)
+              .gte("payment_date", startOfMonthKolkata)
+              .limit(5000)
+          )
+        : Promise.resolve({ data: [] }),
+      // Today's payments - only if permitted (FIX-06)
+      canViewFinancials
+        ? withBranch(
+            supabaseAdmin
+              .from("payments")
+              .select("amount")
+              .eq("organization_id", tenant.organizationId)
+              .gte("payment_date", `${todayKolkata}T00:00:00`)
+              .limit(2000)
+          )
+        : Promise.resolve({ data: [] }),
+      // Last 7 days attendance for trend chart (FIX-07)
       withBranch(
         supabaseAdmin
           .from("attendance")
           .select("date")
           .eq("organization_id", tenant.organizationId)
           .gte("date", new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0])
+          .limit(10000)
       )
     ]);
 
-    const monthlyRevenue = (paymentsRes.data || []).reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-    const todayCollection = (todayPaymentsRes.data || []).reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+    const monthlyRevenue = canViewFinancials
+      ? (paymentsRes.data || []).reduce((sum: number, p: any) => sum + Number(p.amount), 0)
+      : 0;
+    const todayCollection = canViewFinancials
+      ? (todayPaymentsRes.data || []).reduce((sum: number, p: any) => sum + Number(p.amount), 0)
+      : 0;
 
     // Group last 7 days attendance
     const attendanceMap: Record<string, number> = {};

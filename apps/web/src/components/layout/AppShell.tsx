@@ -29,12 +29,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [currentTime, setCurrentTime] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("all");
   const [orgId, setOrgId] = useState<string | undefined>(undefined);
+  const [userRole, setUserRole] = useState<string>("GYM_OWNER");
 
   useEffect(() => {
-    // Load persisted branch from localStorage
+    // Load persisted branch & role from localStorage
     const savedBranch = localStorage.getItem("gymcare_selected_branch");
     if (savedBranch) {
       setSelectedBranch(savedBranch);
+    }
+    const savedRole = localStorage.getItem("gymcare_user_role");
+    if (savedRole) {
+      setUserRole(savedRole);
     }
 
     // Fetch authenticated organization context
@@ -206,16 +211,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gym-red"></span>
             </button>
 
-            {/* User Profile avatar */}
-            <div className="flex items-center gap-2.5 pl-2 border-l border-gym-border">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center text-white font-bold text-xs shadow-md">
-                GO
+            {/* User Profile avatar / Switch Role */}
+            <Link
+              href="/login"
+              className="flex items-center gap-2.5 pl-2 border-l border-gym-border hover:opacity-85 transition-opacity"
+              title="Click to Switch Role or Sign Out"
+            >
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center text-white font-bold text-xs shadow-md uppercase">
+                {userRole ? userRole.substring(0, 2) : "GO"}
               </div>
               <div className="hidden lg:block text-left">
-                <div className="text-xs font-semibold text-white">Gym Owner</div>
-                <div className="text-[10px] text-gym-muted">Full Access</div>
+                <div className="text-xs font-semibold text-white capitalize">
+                  {userRole ? userRole.toLowerCase().replace("_", " ") : "Gym Owner"}
+                </div>
+                <div className="text-[10px] text-gym-muted">Switch Role / Portal</div>
               </div>
-            </div>
+            </Link>
           </div>
         </header>
 

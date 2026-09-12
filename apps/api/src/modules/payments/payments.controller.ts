@@ -82,7 +82,38 @@ export async function paymentRoutes(app: FastifyInstance) {
       }
     }
 
-    // 1. Fetch current invoice
+    // 1. Attempt atomic PostgreSQL RPC execution (FIX-01)
+    const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc("rpc_collect_payment", {
+      p_org_id: tenant.organizationId,
+      p_branch_id: branch_id,
+      p_invoice_id: invoice_id,
+      p_member_id: member_id,
+      p_amount: amount,
+      p_payment_method: payment_method,
+      p_transaction_id: transaction_id || null,
+      p_notes: notes || null,
+      p_idempotency_key: idempotency_key || null,
+      p_actor_id: tenant.userId
+    });
+
+    if (!rpcError && rpcData) {
+      const { data: payRecord } = await supabaseAdmin
+        .from("payments")
+        .select("*")
+        .eq("id", rpcData.payment_id)
+        .maybeSingle();
+
+      return reply.status(201).send({
+        success: true,
+        data: {
+          payment: payRecord || { id: rpcData.payment_id, receipt_number: rpcData.receipt_number, amount },
+          invoice_status: rpcData.invoice_status,
+          balance_remaining: rpcData.balance_remaining
+        }
+      });
+    }
+
+    // 2. Fallback: Fetch current invoice
     const { data: invoice, error: invErr } = await supabaseAdmin
       .from("invoices")
       .select("*")
@@ -96,12 +127,21 @@ export async function paymentRoutes(app: FastifyInstance) {
 
     // 2. Generate sequential Receipt Number
     const year = new Date().getFullYear();
-    const { count: payCount } = await supabaseAdmin
-      .from("payments")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", tenant.organizationId);
+    let paySeq: string;
+    const { data: seqData } = await supabaseAdmin.rpc("get_next_org_sequence", {
+      p_org_id: tenant.organizationId,
+      p_type: "RECEIPT"
+    });
 
-    const paySeq = ((payCount || 0) + 1).toString().padStart(4, "0");
+    if (seqData) {
+      paySeq = Number(seqData).toString().padStart(4, "0");
+    } else {
+      const { count: payCount } = await supabaseAdmin
+        .from("payments")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", tenant.organizationId);
+      paySeq = ((payCount || 0) + 1).toString().padStart(4, "0");
+    }
     const receiptNumber = `RCP-${year}-${paySeq}`;
 
     // 3. Insert Payment Record

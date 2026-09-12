@@ -62,7 +62,41 @@ export async function membershipRoutes(app: FastifyInstance) {
 
     const { member_id, branch_id, plan_id, start_date, discount_amount, payment_method, amount_paid, transaction_id, notes } = parseResult.data;
 
-    // 1. Fetch Plan and Member
+    // 1. Attempt atomic PostgreSQL RPC execution (FIX-01)
+    const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc("rpc_assign_membership_with_invoice", {
+      p_org_id: tenant.organizationId,
+      p_branch_id: branch_id,
+      p_member_id: member_id,
+      p_plan_id: plan_id,
+      p_start_date: start_date,
+      p_discount: discount_amount || 0,
+      p_amount_paid: amount_paid || 0,
+      p_payment_method: payment_method || "CASH",
+      p_transaction_id: transaction_id || null,
+      p_notes: notes || null,
+      p_actor_id: tenant.userId
+    });
+
+    if (!rpcError && rpcData) {
+      const [invRes, membRes, payRes] = await Promise.all([
+        supabaseAdmin.from("invoices").select("*").eq("id", rpcData.invoice_id).single(),
+        supabaseAdmin.from("memberships").select("*").eq("id", rpcData.membership_id).single(),
+        rpcData.payment_id
+          ? supabaseAdmin.from("payments").select("*").eq("id", rpcData.payment_id).single()
+          : Promise.resolve({ data: null })
+      ]);
+
+      return reply.status(201).send({
+        success: true,
+        data: {
+          membership: membRes.data,
+          invoice: invRes.data,
+          payment: payRes.data
+        }
+      });
+    }
+
+    // Fallback: Fetch Plan and Member
     const [planRes, memberRes, orgRes] = await Promise.all([
       supabaseAdmin.from("membership_plans").select("*").eq("id", plan_id).eq("organization_id", tenant.organizationId).single(),
       supabaseAdmin.from("members").select("*").eq("id", member_id).eq("organization_id", tenant.organizationId).single(),

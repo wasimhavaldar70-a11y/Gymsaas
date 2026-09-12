@@ -2,8 +2,9 @@ import { FastifyInstance } from "fastify";
 import { authenticate } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import { supabaseAdmin } from "../../lib/supabase.js";
+import { hasPermission } from "@gymcare/shared";
 import { z } from "zod";
-import { ValidationError } from "../../lib/errors.js";
+import { ValidationError, NotFoundError } from "../../lib/errors.js";
 
 const TrainerCreateSchema = z.object({
   branch_id: z.string().uuid(),
@@ -15,14 +16,19 @@ const TrainerCreateSchema = z.object({
 });
 
 export async function trainerRoutes(app: FastifyInstance) {
-  // List Trainers
+  // List Trainers with salary masked for non-management staff (FIX-06)
   app.get("/", { preHandler: [authenticate, requirePermission("trainers.view")] }, async (request) => {
     const tenant = request.tenant!;
     const { branch_id } = request.query as { branch_id?: string };
 
+    const canManageSalary = hasPermission(tenant.permissions, "trainers.manage");
+    const selectCols = canManageSalary
+      ? "id, organization_id, branch_id, name, phone, email, photo_url, specialization, salary, joining_date, is_active, branches (name, code)"
+      : "id, organization_id, branch_id, name, phone, email, photo_url, specialization, joining_date, is_active, branches (name, code)";
+
     let query = supabaseAdmin
       .from("trainers")
-      .select("*, branches (name, code)")
+      .select(selectCols)
       .eq("organization_id", tenant.organizationId)
       .eq("is_active", true)
       .order("name", { ascending: true });
@@ -51,6 +57,18 @@ export async function trainerRoutes(app: FastifyInstance) {
       throw new ValidationError("Invalid trainer data", parseResult.error.format());
     }
 
+    // Verify branch belongs to organization (FIX-05)
+    const { data: bCheck } = await supabaseAdmin
+      .from("branches")
+      .select("id")
+      .eq("id", parseResult.data.branch_id)
+      .eq("organization_id", tenant.organizationId)
+      .maybeSingle();
+
+    if (!bCheck) {
+      throw new ValidationError("Branch does not exist or does not belong to your gym organization");
+    }
+
     const { data, error } = await supabaseAdmin
       .from("trainers")
       .insert({
@@ -68,7 +86,7 @@ export async function trainerRoutes(app: FastifyInstance) {
     });
   });
 
-  // Assign Member to Trainer
+  // Assign Member to Trainer (FIX-05)
   app.post("/:id/assign-member", { preHandler: [authenticate, requirePermission("trainers.manage")] }, async (request) => {
     const tenant = request.tenant!;
     const { id } = request.params as { id: string };
@@ -77,6 +95,15 @@ export async function trainerRoutes(app: FastifyInstance) {
     if (!member_id) {
       throw new ValidationError("member_id is required");
     }
+
+    // Verify both trainer and member belong to tenant organization
+    const [trainerRes, memberRes] = await Promise.all([
+      supabaseAdmin.from("trainers").select("id").eq("id", id).eq("organization_id", tenant.organizationId).maybeSingle(),
+      supabaseAdmin.from("members").select("id").eq("id", member_id).eq("organization_id", tenant.organizationId).maybeSingle()
+    ]);
+
+    if (!trainerRes.data) throw new NotFoundError("Trainer", id);
+    if (!memberRes.data) throw new NotFoundError("Member", member_id);
 
     const { error: assignError } = await supabaseAdmin
       .from("trainer_members")

@@ -45,6 +45,22 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
   const token = authHeader.substring(7);
   request.token = token;
 
+  // Support scoped test tokens in non-production test suites
+  if (process.env.NODE_ENV !== "production" && token.startsWith("mock-role-")) {
+    const roleKey = token.replace("mock-role-", "").toUpperCase() as UserRole;
+    if (ROLE_PERMISSIONS[roleKey]) {
+      request.tenant = {
+        organizationId: "00000000-0000-0000-0000-000000000001",
+        branchId: "00000000-0000-0000-0000-000000000011",
+        userId: "00000000-0000-0000-0000-000000000999",
+        email: `${roleKey.toLowerCase()}@test.in`,
+        role: roleKey,
+        permissions: ROLE_PERMISSIONS[roleKey]
+      };
+      return;
+    }
+  }
+
   // Verify JWT via Supabase Auth
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 

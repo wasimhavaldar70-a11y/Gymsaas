@@ -82,6 +82,18 @@ export async function memberRoutes(app: FastifyInstance) {
 
     const memberData = parseResult.data;
 
+    // Verify branch belongs to current organization (FIX-05)
+    const { data: branchCheck } = await supabaseAdmin
+      .from("branches")
+      .select("id")
+      .eq("id", memberData.branch_id)
+      .eq("organization_id", tenant.organizationId)
+      .maybeSingle();
+
+    if (!branchCheck) {
+      throw new ValidationError(`Branch does not exist or does not belong to your gym organization`);
+    }
+
     // Check for duplicate active mobile number within the same organization
     const { data: existingMobile } = await supabaseAdmin
       .from("members")
@@ -95,13 +107,23 @@ export async function memberRoutes(app: FastifyInstance) {
       throw new ConflictError(`A member with mobile '${memberData.mobile}' already exists (${existingMobile.member_id})`);
     }
 
-    // Generate unique sequential member ID (e.g. MEM-0001)
-    const { count } = await supabaseAdmin
-      .from("members")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", tenant.organizationId);
+    // Generate collision-free sequential member ID via atomic sequence RPC (FIX-04)
+    let sequenceNum: number;
+    const { data: seqData, error: seqError } = await supabaseAdmin.rpc("get_next_org_sequence", {
+      p_org_id: tenant.organizationId,
+      p_type: "MEMBER"
+    });
 
-    const sequenceNum = (count || 0) + 1;
+    if (!seqError && seqData) {
+      sequenceNum = Number(seqData);
+    } else {
+      const { count } = await supabaseAdmin
+        .from("members")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", tenant.organizationId);
+      sequenceNum = (count || 0) + 1;
+    }
+
     const generatedMemberId = `MEM-${sequenceNum.toString().padStart(4, "0")}`;
 
     const { data: newMember, error: insertError } = await supabaseAdmin

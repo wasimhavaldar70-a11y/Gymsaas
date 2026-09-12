@@ -12,54 +12,58 @@ export function useRealtimeSync(organizationId?: string) {
       return;
     }
 
-    // Subscribe to attendance real-time updates
+    const orgFilter = `organization_id=eq.${organizationId}`;
+
+    // Subscribe to attendance real-time updates (FIX-03: Tenant Scoped)
     const attendanceChannel = supabase
-      .channel("realtime-attendance")
+      .channel(`org:${organizationId}:attendance`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "attendance"
+          table: "attendance",
+          filter: orgFilter
         },
-        (payload) => {
-          console.log("⚡ [Realtime] Attendance updated:", payload);
+        () => {
           queryClient.invalidateQueries({ queryKey: ["attendance"] });
+          queryClient.invalidateQueries({ queryKey: ["attendance-log"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
         }
       )
       .subscribe();
 
-    // Subscribe to member real-time updates
+    // Subscribe to member real-time updates (FIX-03: Tenant Scoped)
     const membersChannel = supabase
-      .channel("realtime-members")
+      .channel(`org:${organizationId}:members`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "members"
+          table: "members",
+          filter: orgFilter
         },
-        (payload) => {
-          console.log("⚡ [Realtime] Members updated:", payload);
+        () => {
           queryClient.invalidateQueries({ queryKey: ["members"] });
+          queryClient.invalidateQueries({ queryKey: ["members-selector"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
         }
       )
       .subscribe();
 
-    // Subscribe to payments real-time updates
+    // Subscribe to payments real-time updates (FIX-03: Tenant Scoped)
     const paymentsChannel = supabase
-      .channel("realtime-payments")
+      .channel(`org:${organizationId}:payments`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "payments"
+          table: "payments",
+          filter: orgFilter
         },
-        (payload) => {
-          console.log("⚡ [Realtime] Payment recorded:", payload);
+        () => {
           queryClient.invalidateQueries({ queryKey: ["payments"] });
           queryClient.invalidateQueries({ queryKey: ["invoices"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });

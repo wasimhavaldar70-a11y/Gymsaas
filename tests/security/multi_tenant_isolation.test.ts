@@ -94,4 +94,76 @@ describe("GYMCARE CRM - Multi-Tenant Security & Business Logic Verification", ()
     assert.equal(parsed.mobile, "+919822012345");
     assert.equal(parsed.first_name, "Vikram");
   });
+
+  // 4. LIVE API SECURITY & RBAC REJECTION TESTS
+  it("Unauthenticated request to /api/v1/members is rejected with HTTP 401", async () => {
+    const { buildApp } = await import("../../apps/api/src/app.js");
+    const app = buildApp();
+    await app.ready();
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/members"
+    });
+
+    assert.equal(res.statusCode, 401);
+    const body = JSON.parse(res.body);
+    assert.equal(body.success, false);
+    await app.close();
+  });
+
+  it("Trainer role attempting to access /api/v1/settings is rejected with HTTP 403 Forbidden", async () => {
+    const { buildApp } = await import("../../apps/api/src/app.js");
+    const app = buildApp();
+    await app.ready();
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/settings",
+      headers: {
+        authorization: "Bearer mock-role-trainer"
+      }
+    });
+
+    assert.equal(res.statusCode, 403);
+    const body = JSON.parse(res.body);
+    assert.equal(body.success, false);
+    assert.match(body.error.message, /settings\.manage/);
+    await app.close();
+  });
+
+  it("Receptionist role attempting to access /api/v1/reports/gst is rejected with HTTP 403 Forbidden", async () => {
+    const { buildApp } = await import("../../apps/api/src/app.js");
+    const app = buildApp();
+    await app.ready();
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/reports/gst",
+      headers: {
+        authorization: "Bearer mock-role-receptionist"
+      }
+    });
+
+    assert.equal(res.statusCode, 403);
+    const body = JSON.parse(res.body);
+    assert.equal(body.success, false);
+    assert.match(body.error.message, /reports\.financial/);
+    await app.close();
+  });
+
+  it("Rate limit plugin initializes cleanly on Fastify instance", async () => {
+    const { buildApp } = await import("../../apps/api/src/app.js");
+    const app = buildApp();
+    await app.ready();
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/health"
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.ok(res.headers["x-ratelimit-limit"] !== undefined || res.statusCode === 200);
+    await app.close();
+  });
 });

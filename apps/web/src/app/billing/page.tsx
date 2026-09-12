@@ -99,8 +99,12 @@ export default function BillingPage() {
       return;
     }
 
+    const activeBranchId =
+      (typeof window !== "undefined" && localStorage.getItem("gymcare_selected_branch")) ||
+      "00000000-0000-0000-0000-000000000011";
+
     assignMembershipMutation.mutate({
-      branch_id: "00000000-0000-0000-0000-000000000011",
+      branch_id: activeBranchId,
       member_id: selectedMemberId,
       plan_id: selectedPlanId,
       start_date: new Date().toISOString().split("T")[0],

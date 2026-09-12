@@ -2,6 +2,7 @@ import fastify from "fastify";
 import { IncomingMessage } from "http";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import crypto from "crypto";
 import { config } from "./config.js";
 import { AppError } from "./lib/errors.js";
@@ -54,6 +55,12 @@ export function buildApp() {
     origin: [config.CORS_ORIGIN, "http://localhost:3000", "http://127.0.0.1:3000"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+  });
+
+  app.register(rateLimit, {
+    max: 120,
+    timeWindow: "1 minute",
+    allowList: ["127.0.0.1", "localhost"]
   });
 
   // Global Centralized Error Handler

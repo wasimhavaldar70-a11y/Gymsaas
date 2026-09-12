@@ -31,7 +31,10 @@ export default function AttendanceLogPage() {
     date: string;
   }>({
     queryKey: ["attendance-log", selectedDate],
-    queryFn: () => fetchApi<{ data: any[]; count: number; date: string }>("/attendance/today")
+    queryFn: () =>
+      fetchApi<{ data: any[]; count: number; date: string }>(
+        `/attendance/today?date=${selectedDate}`
+      )
   });
 
   const records = attendanceData?.data || [];

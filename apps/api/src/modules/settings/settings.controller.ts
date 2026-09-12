@@ -20,8 +20,8 @@ const SettingsUpdateSchema = z.object({
 });
 
 export async function settingsRoutes(app: FastifyInstance) {
-  // Get Gym Settings
-  app.get("/", { preHandler: [authenticate] }, async (request) => {
+  // Get Gym Settings (FIX-06)
+  app.get("/", { preHandler: [authenticate, requirePermission("settings.manage")] }, async (request) => {
     const tenant = request.tenant!;
 
     const { data: org, error } = await supabaseAdmin
