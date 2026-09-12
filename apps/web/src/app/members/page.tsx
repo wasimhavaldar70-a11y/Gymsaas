@@ -55,14 +55,19 @@ export default function MembersPage() {
 
   // Create member mutation
   const createMemberMutation = useMutation({
-    mutationFn: (newMember: any) =>
-      fetchApi<Member>("/members", {
+    mutationFn: (newMember: any) => {
+      const activeBranchId =
+        (typeof window !== "undefined" && localStorage.getItem("gymcare_selected_branch")) ||
+        "00000000-0000-0000-0000-000000000011";
+
+      return fetchApi<Member>("/members", {
         method: "POST",
         body: JSON.stringify({
-          branch_id: "00000000-0000-0000-0000-000000000011", // Kolhapur Central
+          branch_id: activeBranchId,
           ...newMember
         })
-      }),
+      });
+    },
     onSuccess: (member) => {
       setIsNewMemberModalOpen(false);
       setFormData({

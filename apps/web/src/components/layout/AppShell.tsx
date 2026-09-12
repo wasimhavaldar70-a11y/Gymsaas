@@ -17,6 +17,7 @@ import {
   Dumbbell
 } from "lucide-react";
 import { useRealtimeSync } from "../../hooks/useRealtimeSync";
+import { fetchApi } from "../../lib/api-client";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -27,9 +28,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("all");
+  const [orgId, setOrgId] = useState<string | undefined>(undefined);
 
-  // Activate background realtime synchronization
-  useRealtimeSync("00000000-0000-0000-0000-000000000001");
+  useEffect(() => {
+    // Load persisted branch from localStorage
+    const savedBranch = localStorage.getItem("gymcare_selected_branch");
+    if (savedBranch) {
+      setSelectedBranch(savedBranch);
+    }
+
+    // Fetch authenticated organization context
+    fetchApi<{ organization: { id: string } }>("/auth/me")
+      .then((res) => {
+        if (res?.organization?.id) setOrgId(res.organization.id);
+      })
+      .catch(() => {
+        setOrgId("00000000-0000-0000-0000-000000000001");
+      });
+  }, []);
+
+  // Activate background realtime synchronization for authenticated tenant
+  useRealtimeSync(orgId);
+
+  const handleBranchChange = (branchId: string) => {
+    setSelectedBranch(branchId);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gymcare_selected_branch", branchId);
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -154,7 +180,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Building2 className="w-4 h-4 text-gym-muted shrink-0" />
               <select
                 value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
+                onChange={(e) => handleBranchChange(e.target.value)}
                 className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
               >
                 <option value="all" className="bg-gym-card text-white">All Branches (Organization)</option>

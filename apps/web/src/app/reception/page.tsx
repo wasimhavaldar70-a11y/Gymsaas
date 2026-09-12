@@ -46,19 +46,24 @@ export default function ReceptionDeskPage() {
 
   // Check-in Mutation
   const checkInMutation = useMutation({
-    mutationFn: (memberIdentifier: string) =>
-      fetchApi<{
+    mutationFn: (memberIdentifier: string) => {
+      const activeBranchId =
+        (typeof window !== "undefined" && localStorage.getItem("gymcare_selected_branch")) ||
+        "00000000-0000-0000-0000-000000000011";
+
+      return fetchApi<{
         already_checked_in: boolean;
         message: string;
         data: any;
       }>("/attendance/check-in", {
         method: "POST",
         body: JSON.stringify({
-          branch_id: "00000000-0000-0000-0000-000000000011", // Default Kolhapur Central
+          branch_id: activeBranchId,
           member_identifier: memberIdentifier,
           method: "SEARCH"
         })
-      }),
+      });
+    },
     onSuccess: (res) => {
       if (res.already_checked_in) {
         setFeedback({

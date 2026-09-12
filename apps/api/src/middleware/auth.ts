@@ -23,8 +23,12 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
   const authHeader = request.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    // If running in development without live Supabase configured, fallback to seeded demo tenant
-    if (process.env.NODE_ENV === "development" && (!process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder"))) {
+    // Allow demo bypass ONLY if explicitly enabled via local flag AND strictly not in production
+    if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.ENABLE_DEV_AUTH_BYPASS === "true" &&
+      (!process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder"))
+    ) {
       request.tenant = {
         organizationId: "00000000-0000-0000-0000-000000000001",
         branchId: "00000000-0000-0000-0000-000000000011",

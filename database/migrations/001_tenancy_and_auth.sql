@@ -194,13 +194,15 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE OR REPLACE FUNCTION get_current_user_tenant_id()
 RETURNS UUID AS $$
     SELECT organization_id FROM users WHERE id = auth.uid() AND is_active = TRUE;
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$ LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp;
 
 -- Get authenticated user's branch ID
 CREATE OR REPLACE FUNCTION get_current_user_branch_id()
 RETURNS UUID AS $$
     SELECT branch_id FROM users WHERE id = auth.uid() AND is_active = TRUE;
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$ LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp;
 
 -- Check if current authenticated user has a specific permission
 CREATE OR REPLACE FUNCTION has_permission(perm_id TEXT)
@@ -213,7 +215,8 @@ RETURNS BOOLEAN AS $$
           AND u.is_active = TRUE
           AND (rp.permission_id = perm_id OR u.role = 'SUPER_ADMIN')
     );
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$ LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp;
 
 -- ==============================================================================
 -- 10. ROW LEVEL SECURITY (RLS) POLICIES
