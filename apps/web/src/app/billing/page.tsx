@@ -12,7 +12,8 @@ import {
   X,
   RefreshCw,
   Building,
-  FileText
+  FileText,
+  MessageSquare
 } from "lucide-react";
 import { fetchApi } from "../../lib/api-client";
 import { Payment, MembershipPlan, Member, calculateGst, PaginatedResult } from "@gymcare/shared";
@@ -222,7 +223,34 @@ export default function BillingPage() {
                         year: "numeric"
                       })}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => {
+                          if (!p.members?.mobile) {
+                            alert("No mobile number found for this member");
+                            return;
+                          }
+                          fetchApi("/notifications/whatsapp/send", {
+                            method: "POST",
+                            body: JSON.stringify({
+                              recipient_phone: p.members.mobile,
+                              member_id: p.member_id,
+                              event_type: "PAYMENT_RECEIPT",
+                              variables: {
+                                member_name: p.members.first_name || "Member",
+                                amount: p.amount,
+                                receipt_number: p.receipt_number
+                              }
+                            })
+                          })
+                            .then(() => alert(`WhatsApp receipt sent to ${p.members.mobile} for ₹${p.amount}`))
+                            .catch((err: any) => alert(`WhatsApp notification error: ${err.message || "Failed"}`));
+                        }}
+                        className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                        title="Send WhatsApp Receipt"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => setSelectedInvoiceForPrint(p.invoices)}
                         className="p-1.5 rounded-lg bg-gym-surface hover:bg-slate-800 text-slate-300 hover:text-white"
@@ -323,6 +351,7 @@ export default function BillingPage() {
                     <option value="CARD">Debit / Credit Card</option>
                     <option value="BANK_TRANSFER">Bank Transfer / NEFT</option>
                     <option value="CHEQUE">Cheque / Demand Draft</option>
+                    <option value="RAZORPAY">Razorpay (Online Payment)</option>
                   </select>
                 </div>
               </div>

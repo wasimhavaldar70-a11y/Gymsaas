@@ -7,6 +7,7 @@ export const DEFAULT_COUNTRY_CODE = "+91";
 export const USER_ROLES = [
   "SUPER_ADMIN",
   "GYM_OWNER",
+  "GYM_MANAGER",
   "BRANCH_MANAGER",
   "RECEPTIONIST",
   "TRAINER",
@@ -14,6 +15,16 @@ export const USER_ROLES = [
   "STAFF"
 ] as const;
 export type UserRole = (typeof USER_ROLES)[number];
+
+export const ORGANIZATION_STATUSES = [
+  "TRIAL",
+  "ACTIVE",
+  "PAST_DUE",
+  "EXPIRED",
+  "SUSPENDED",
+  "CANCELLED"
+] as const;
+export type OrganizationStatus = (typeof ORGANIZATION_STATUSES)[number];
 
 export const MEMBER_STATUSES = [
   "ACTIVE",
@@ -48,9 +59,36 @@ export const PAYMENT_METHODS = [
   "UPI",
   "CARD",
   "BANK_TRANSFER",
-  "CHEQUE"
+  "CHEQUE",
+  "RAZORPAY"
 ] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const WHATSAPP_MESSAGE_STATUSES = [
+  "QUEUED",
+  "SENDING",
+  "SENT",
+  "DELIVERED",
+  "READ",
+  "FAILED"
+] as const;
+export type WhatsAppMessageStatus = (typeof WHATSAPP_MESSAGE_STATUSES)[number];
+
+export const WHATSAPP_EVENT_TYPES = [
+  "PAYMENT_RECEIPT",
+  "PAYMENT_DUE",
+  "EXPIRY_REMINDER",
+  "EXPIRY_REMINDER_30",
+  "EXPIRY_REMINDER_15",
+  "EXPIRY_REMINDER_7",
+  "EXPIRY_REMINDER_3",
+  "EXPIRY_REMINDER_1",
+  "EXPIRY_DAY",
+  "BIRTHDAY",
+  "WELCOME",
+  "CUSTOM"
+] as const;
+export type WhatsAppEventType = (typeof WHATSAPP_EVENT_TYPES)[number];
 
 export const PAYMENT_STATUSES = [
   "PENDING",

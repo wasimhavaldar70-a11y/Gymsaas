@@ -23,6 +23,8 @@ import { dietRoutes } from "./modules/diets/diets.controller.js";
 import { leadRoutes } from "./modules/leads/leads.controller.js";
 import { reportRoutes } from "./modules/reports/reports.controller.js";
 import { settingsRoutes } from "./modules/settings/settings.controller.js";
+import { superadminRoutes } from "./modules/superadmin/superadmin.controller.js";
+import { whatsappRoutes } from "./modules/notifications/whatsapp.controller.js";
 
 export function buildApp() {
   const app = fastify({
@@ -109,6 +111,8 @@ export function buildApp() {
   app.register(leadRoutes, { prefix: "/api/v1/leads" });
   app.register(reportRoutes, { prefix: "/api/v1/reports" });
   app.register(settingsRoutes, { prefix: "/api/v1/settings" });
+  app.register(superadminRoutes, { prefix: "/api/v1/superadmin" });
+  app.register(whatsappRoutes, { prefix: "/api/v1/notifications/whatsapp" });
 
   return app;
 }

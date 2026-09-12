@@ -168,14 +168,55 @@ describe("GYMCARE CRM - Multi-Tenant Security & Business Logic Verification", ()
     await app.close();
   });
 
-  // 5. RAZORPAY REMOVAL VERIFICATION
-  it("PAYMENT_METHODS does NOT include RAZORPAY and only allows direct payments", () => {
-    assert.equal((PAYMENT_METHODS as readonly string[]).includes("RAZORPAY"), false);
+  // 5. PAYMENT METHODS VERIFICATION
+  it("PAYMENT_METHODS includes RAZORPAY alongside direct payments", () => {
+    assert.equal((PAYMENT_METHODS as readonly string[]).includes("RAZORPAY"), true);
     assert.equal((PAYMENT_METHODS as readonly string[]).includes("CASH"), true);
     assert.equal((PAYMENT_METHODS as readonly string[]).includes("UPI"), true);
     assert.equal((PAYMENT_METHODS as readonly string[]).includes("CARD"), true);
     assert.equal((PAYMENT_METHODS as readonly string[]).includes("BANK_TRANSFER"), true);
     assert.equal((PAYMENT_METHODS as readonly string[]).includes("CHEQUE"), true);
+  });
+
+  // 6. SUPER ADMIN RBAC & TENANT ACCESS TESTS
+  it("Super Admin can access platform endpoints (/api/v1/superadmin/dashboard)", async () => {
+    const { buildApp } = await import("../../apps/api/src/app.js");
+    const app = buildApp();
+    await app.ready();
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/superadmin/dashboard",
+      headers: {
+        authorization: "Bearer mock-role-superadmin"
+      }
+    });
+
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.body);
+    assert.equal(body.success, true);
+    assert.ok(body.data.total_gyms !== undefined);
+    assert.ok(body.data.monthly_recurring_revenue !== undefined);
+    await app.close();
+  });
+
+  it("Gym Owner attempting to access /api/v1/superadmin/dashboard is rejected with HTTP 403 Forbidden", async () => {
+    const { buildApp } = await import("../../apps/api/src/app.js");
+    const app = buildApp();
+    await app.ready();
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/superadmin/dashboard",
+      headers: {
+        authorization: "Bearer mock-role-owner"
+      }
+    });
+
+    assert.equal(res.statusCode, 403);
+    const body = JSON.parse(res.body);
+    assert.equal(body.success, false);
+    await app.close();
   });
 
   // 6. CROSS-TENANT IDOR ENTITY VALIDATION TESTS

@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Eye,
   CreditCard,
-  Building
+  Building,
+  MessageSquare
 } from "lucide-react";
 import { fetchApi } from "../../lib/api-client";
 import { Member, PaginatedResult } from "@gymcare/shared";
@@ -231,7 +232,30 @@ export default function MembersPage() {
                         {member.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => {
+                          if (!member.mobile) {
+                            alert("No mobile number for this member");
+                            return;
+                          }
+                          fetchApi("/notifications/whatsapp/send", {
+                            method: "POST",
+                            body: JSON.stringify({
+                              recipient_phone: member.mobile,
+                              member_id: member.id,
+                              event_type: "CUSTOM",
+                              custom_message: `Hello ${member.first_name}, greetings from FITNEX Fitness Club! Thank you for working out with us.`
+                            })
+                          })
+                            .then(() => alert(`WhatsApp notification dispatched to ${member.first_name} (${member.mobile})`))
+                            .catch((err: any) => alert(`WhatsApp error: ${err.message || "Failed"}`));
+                        }}
+                        className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
+                        title="Send WhatsApp Alert"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => setSelectedMember(member)}
                         className="p-1.5 rounded-lg bg-gym-surface hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"

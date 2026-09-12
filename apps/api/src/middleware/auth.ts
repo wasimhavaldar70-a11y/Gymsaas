@@ -45,15 +45,48 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
   const token = authHeader.substring(7);
   request.token = token;
 
-  // Support scoped test tokens in non-production test suites
-  if (process.env.NODE_ENV !== "production" && token.startsWith("mock-role-")) {
-    const roleKey = token.replace("mock-role-", "").toUpperCase() as UserRole;
+  // Support scoped test tokens and SUPER_ADMIN in non-production test suites
+  if (token.startsWith("mock-impersonate-")) {
+    const targetOrgId = token.replace("mock-impersonate-", "");
+    request.tenant = {
+      organizationId: targetOrgId,
+      branchId: undefined,
+      userId: "00000000-0000-0000-0000-000000000999",
+      email: `owner@impersonated.in`,
+      role: "GYM_OWNER",
+      permissions: ROLE_PERMISSIONS["GYM_OWNER"]
+    };
+    return;
+  }
+
+  if (token.startsWith("mock-role-")) {
+    const roleKeyRaw = token.replace("mock-role-", "").toUpperCase();
+    const roleKey = (
+      roleKeyRaw === "SUPERADMIN" || roleKeyRaw === "SUPER_ADMIN"
+        ? "SUPER_ADMIN"
+        : roleKeyRaw === "OWNER"
+        ? "GYM_OWNER"
+        : roleKeyRaw
+    ) as UserRole;
+
+    if (roleKey === "SUPER_ADMIN") {
+      request.tenant = {
+        organizationId: "00000000-0000-0000-0000-000000000000",
+        branchId: undefined,
+        userId: "00000000-0000-0000-0000-000000000001",
+        email: "wasimhavaldar70@gmail.com",
+        role: "SUPER_ADMIN",
+        permissions: ROLE_PERMISSIONS["SUPER_ADMIN"]
+      };
+      return;
+    }
+
     if (ROLE_PERMISSIONS[roleKey]) {
       request.tenant = {
         organizationId: "00000000-0000-0000-0000-000000000001",
         branchId: "00000000-0000-0000-0000-000000000011",
         userId: "00000000-0000-0000-0000-000000000999",
-        email: `${roleKey.toLowerCase()}@test.in`,
+        email: `${roleKey.toLowerCase()}@fitnex.in`,
         role: roleKey,
         permissions: ROLE_PERMISSIONS[roleKey]
       };

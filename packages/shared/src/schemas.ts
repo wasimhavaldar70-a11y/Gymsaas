@@ -133,3 +133,35 @@ export const BranchCreateSchema = z.object({
   state: z.string().min(2),
   pincode: z.string().regex(/^\d{6}$/).optional()
 });
+
+export const CreateGymTenantSchema = z.object({
+  name: z.string().min(2, "Gym name must be at least 2 characters").max(150),
+  slug: z.string().min(2).max(100).regex(/^[a-z0-9-]+$/, "Slug must only contain lowercase alphanumeric characters and hyphens"),
+  phone: IndianMobileSchema,
+  email: z.string().email("Valid gym contact email is required"),
+  owner_first_name: z.string().min(2).max(100),
+  owner_last_name: z.string().min(1).max(100),
+  owner_mobile: IndianMobileSchema,
+  owner_email: z.string().email("Valid owner email is required"),
+  plan_id: z.enum(["STARTER", "BUSINESS", "ENTERPRISE"]).default("BUSINESS"),
+  city: z.string().default("Kolhapur"),
+  state: z.string().default("Maharashtra"),
+  state_code: z.string().default("27"),
+  gstin: OptionalGstinSchema,
+  address: z.string().optional(),
+  pincode: z.string().regex(/^\d{6}$/).optional()
+});
+
+export const WhatsAppSendSchema = z.object({
+  member_id: z.string().uuid().optional(),
+  recipient_phone: IndianMobileSchema,
+  event_type: z.string(),
+  custom_message: z.string().optional(),
+  variables: z.record(z.any()).optional()
+});
+
+export const WhatsAppTemplateUpdateSchema = z.object({
+  template_body: z.string().min(5),
+  variables: z.array(z.string()).optional(),
+  is_active: z.boolean().default(true)
+});

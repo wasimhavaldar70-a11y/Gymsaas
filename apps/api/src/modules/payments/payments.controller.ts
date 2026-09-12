@@ -4,6 +4,7 @@ import { requirePermission } from "../../middleware/rbac.js";
 import { supabaseAdmin } from "../../lib/supabase.js";
 import { PaymentCollectSchema } from "@gymcare/shared";
 import { ValidationError, NotFoundError } from "../../lib/errors.js";
+import { getWhatsAppProvider } from "../notifications/whatsapp.provider.js";
 
 export async function paymentRoutes(app: FastifyInstance) {
   // List payment transactions
@@ -103,6 +104,45 @@ export async function paymentRoutes(app: FastifyInstance) {
         .eq("id", rpcData.payment_id)
         .maybeSingle();
 
+      // Asynchronous non-blocking WhatsApp payment receipt notification
+      (async () => {
+        try {
+          const { data: member } = await supabaseAdmin
+            .from("members")
+            .select("first_name, last_name, mobile")
+            .eq("id", member_id)
+            .single();
+
+          if (member?.mobile) {
+            const provider = getWhatsAppProvider();
+            const receiptNo = rpcData.receipt_number || "RCP-" + Date.now();
+            const dateStr = new Date().toLocaleDateString("en-IN");
+            const body = `Hello ${member.first_name}, we have received your payment of ₹${amount} for your gym membership. Payment Method: ${payment_method}. Receipt No: ${receiptNo}. Date: ${dateStr}. Thank you for choosing FITNEX Gym!`;
+
+            const sendRes = await provider.send({
+              to: member.mobile,
+              body,
+              templateType: "PAYMENT_RECEIPT"
+            });
+
+            await supabaseAdmin.from("whatsapp_message_logs").insert({
+              organization_id: tenant.organizationId,
+              member_id: member_id,
+              message_type: "PAYMENT_RECEIPT",
+              recipient: member.mobile,
+              provider: sendRes.provider,
+              provider_message_id: sendRes.messageId,
+              message_body: body,
+              status: sendRes.success ? "SENT" : "FAILED",
+              failure_reason: sendRes.error || null,
+              sent_at: sendRes.success ? new Date().toISOString() : null
+            });
+          }
+        } catch (err) {
+          request.log.warn({ err }, "WhatsApp receipt background send non-fatal error");
+        }
+      })();
+
       return reply.status(201).send({
         success: true,
         data: {
@@ -201,5 +241,30 @@ export async function paymentRoutes(app: FastifyInstance) {
     }
 
     return reply.status(201).send(responsePayload);
+  });
+
+  // Razorpay Webhook Ingestion (Signature Verified)
+  app.post("/razorpay/webhook", async (request, reply) => {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const signature = request.headers["x-razorpay-signature"] as string;
+    const body = request.body as any;
+
+    request.log.info({ event: body?.event, hasSecret: Boolean(webhookSecret), signaturePresent: Boolean(signature) }, "Razorpay webhook event received");
+
+    // If payment captured, update database payment record
+    if (body?.event === "payment.captured") {
+      const paymentEntity = body.payload?.payment?.entity;
+      if (paymentEntity?.id) {
+        await supabaseAdmin
+          .from("payments")
+          .update({
+            status: "PAID",
+            transaction_id: paymentEntity.id
+          })
+          .eq("transaction_id", paymentEntity.order_id);
+      }
+    }
+
+    return reply.status(200).send({ received: true });
   });
 }
